@@ -18,14 +18,16 @@ def quant_model(float_model, quant_model, quant_dataset, batchsize, tfrec_dir, e
         tfrec_dir (str): full path to folder containing TFRecord
         evaluate (bool): if or not evlaute quantized model
     '''
+
+	# make folder for saving quantized model
     head_tail = os.path.split(quant_model)
-    os.midires(head_tail[0], exist_ok = True)
+    os.makedirs(head_tail[0], exist_ok = True)
     
     # load float model
     float_model = load_model(float_model)
 
     quantizer = vitis_quantize.VitisQuantizer(float_model)
-    quantized_model = quantizer.quantize_model(calib_dataset=quant_dataset)
+    quantized_model = quantizer.quantize_model(calib_dataset = quant_dataset, batch_size = batchsize, tfrec_dir = tfrec_dir)
 
     if evaluate:
         print('\n'+DIVIDER)

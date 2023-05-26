@@ -1,18 +1,10 @@
-import argparse
 import os
-import shutil
-import sys
-
-from quantize import quant_model
 
 # Silence TensorFlow messages
 os.environ['TF_CPP_MIN_LOG_LEVEL']='3'
 
-import pandas as pd
 import tensorflow as tf
-from tensorflow_model_optimization.quantization.keras import vitis_quantize
-from tensorflow.keras.models import load_model
-from tensorflow.keras.optimizers import Adam
+import pandas ad pd
 
 with open('inputFiles/train_var_list.txt', 'r') as f1:
     lines = f1.readlines()
@@ -23,4 +15,8 @@ pkl_data = pd.read_pickle('inputFiles/df_test.pkl')
 input_data = pkl_data[var_names]
 labels = pkl_data['Sample']
 
+### To check the range of input, here assumed quatization to 8-bit unsigned intergers (tf.quint8) with a range of 0 - 255
+### I may need to normalize input_data...
+quantized_data =  tf.quantization.quantize(input_data, 0, 255, tf.quint8)
+dataset = tf.data.Dataset.from_tensor_slices((input_data, labels))
 
