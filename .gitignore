@@ -3,6 +3,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# local dataset
+inputFiles/*h5
+inputFiles/*pkl
+
 # C extensions
 *.so
 
