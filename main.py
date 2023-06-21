@@ -28,18 +28,20 @@ print (' --batchsize    : ', args.batchsize)
 print (' --evaluate     : ', args.evaluate)
 print('------------------------------------\n')
 
-with open('inputFiles/train_var_list.txt', 'r') as f1:
-    lines = f1.readlines()
+features = pd.read_hdf('inputFiles/df_test.h5', key='X_test')
+labels   = pd.read_hdf('inputFiles/df_test.h5', key='Y_test')
 
-var_names = [line.strip() for line in lines]
+# Convert features and labels to Tensor
+features_tensor = tf.convert_to_tensor(features.values, dtype=tf.float32)
+labels_tensor = tf.convert_to_tensor(labels.values, dtype=tf.float32)
 
-pkl_data = pd.read_pickle('inputFiles/df_test.pkl')
-input_data = pkl_data[var_names]
-labels = pkl_data['Sample']
+# Quantize the features using tf.quantization
+# Quantize the features to tf.qint8, you might need to adjust this later on
+features_min, features_max = tf.reduce_min(features_tensor), tf.reduce_max(features_tensor)
+_, features_scale, features_offset = tf.quantization.quantize(features_tensor, features_min, features_max, tf.qint8)
 
-### To check the range of input, here assumed quatization to 8-bit unsigned intergers (tf.quint8) with a range of 0 - 255
-### I may need to normalize input_data...
-quantized_data =  tf.quantization.quantize(input_data, 0, 255, tf.quint8)
-dataset = tf.data.Dataset.from_tensor_slices((input_data, labels))
+# Now, you have quantized features that you can use for further processing
+quantized_features = tf.quantization.quantize_and_dequantize(features_tensor, features_min, features_max)
+
 
 quant_model(args.float_model, args.quant_model, args.batchsize, dataset, args.evaluate)

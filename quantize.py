@@ -8,14 +8,14 @@ from tensorflow_model_optimization.quantization.keras import vitis_quantize
 from tensorflow.keras.models import load_model
 from tensorflow.keras.optimizers import Adam
 
-def quant_model(float_model, quant_model, quant_dataset, batchsize, tfrec_dir, evaluate):
+def quant_model(float_model, quant_model, quant_dataset, batchsize, quant_dataset, evaluate):
     '''Quantize the floating-point model
     Args:
         float_model (str): full path of floating-point model
         quant_model (str): full path of quantized model
         quant_dataset (str): full path quantized dataset
         batchsize (int): batchsize for quantization
-        tfrec_dir (str): full path to folder containing TFRecord
+        quant_dataset (str): full path to folder containing quantized dataset 
         evaluate (bool): if or not evlaute quantized model
     '''
 
