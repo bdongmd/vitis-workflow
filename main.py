@@ -1,13 +1,17 @@
 import os
 import argparse
+import sys
 
 # Silence TensorFlow messages
 os.environ['TF_CPP_MIN_LOG_LEVEL']='3'
 
 import tensorflow as tf
 import pandas as pd
+import h5py
+import numpy as np
 
-from quantize import quant_model
+from tensorflow.keras.layers import Dropout
+from tensorflow_model_optimization.quantization.keras import vitis_quantize
 
 ap = argparse.ArgumentParser()
 ap.add_argument('-m', '--float_model', type=str, default='inputFiles/best_model.h5', help='Path of floating-point model. Default is inputFiles/best_model.h5')
@@ -28,20 +32,62 @@ print (' --batchsize    : ', args.batchsize)
 print (' --evaluate     : ', args.evaluate)
 print('------------------------------------\n')
 
-features = pd.read_hdf('inputFiles/df_test.h5', key='X_test')
-labels   = pd.read_hdf('inputFiles/df_test.h5', key='Y_test')
+def replace_dropout(loaded_model):
+    new_model = tf.keras.models.clone_model(loaded_model)
+    new_model.set_weights(loaded_model.get_weights())
 
-# Convert features and labels to Tensor
-features_tensor = tf.convert_to_tensor(features.values, dtype=tf.float32)
-labels_tensor = tf.convert_to_tensor(labels.values, dtype=tf.float32)
+    for layer in new_model.layers:
+        if isinstance(layer, tf.keras.layers.Dropout):
+            layer.build(layer.input_shape)
+            layer.call = tf.function(layer.call)
 
-# Quantize the features using tf.quantization
-# Quantize the features to tf.qint8, you might need to adjust this later on
-features_min, features_max = tf.reduce_min(features_tensor), tf.reduce_max(features_tensor)
-_, features_scale, features_offset = tf.quantization.quantize(features_tensor, features_min, features_max, tf.qint8)
+    return new_model
 
-# Now, you have quantized features that you can use for further processing
-quantized_features = tf.quantization.quantize_and_dequantize(features_tensor, features_min, features_max)
+def input_fn_quant(features, labels, batchsize):
+    dataset = tf.data.Dataset.from_tensor_slices((features, labels))
+    dataset = dataset.batch(batchsize, drop_remainder=False)
+    dataset = dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
+    return dataset
 
+h5f = h5py.File('inputFiles/df_test.h5', 'r')
+features = np.array(h5f['X_test'])
+labels = np.array(h5f['Y_test'])
+h5f.close()
+labels = np.argmax(labels, axis=-1)
 
-quant_model(args.float_model, args.quant_model, args.batchsize, dataset, args.evaluate)
+## load trained model
+#model = tf.keras.models.load_model('./inputFiles/best_model.h5')
+model = tf.keras.models.load_model('./inputFiles/my_model.h5')
+print(model.summary())
+
+## compile the original model
+#model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy', tf.keras.metrics.AUC(name='auc')])
+
+## Evaluate the orignal model
+#print("\nEvaluating Original Model...")
+#orig_loss, orig_acc, orig_auc = model.evaluate(features, labels)
+
+## we want to quantize everything
+## first here goes quantizing feature
+features_quant = features.astype(np.float16)
+## (not sure) since we are dealing with classificaiton problem where the labels are categorical and represented as integer class label, so I guess there is not need to quantize them?
+# Create a tf.data.Dataset for calibration
+calib_dataset = input_fn_quant(features_quant, labels, batchsize=50)
+
+## Applying Quantization using Vitis Quantizer
+quantizer = vitis_quantize.VitisQuantizer(model)
+quantized_model = quantizer.quantize_model(calib_dataset=calib_dataset, verbose=2)
+
+## Compile and retrain the model
+quantized_model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy', tf.keras.metrics.AUC(name='auc')])
+## Retrain the model after quantization (not sure if we want this so far, so commeting it out)
+## quantized_model.fit(features_quant, labels, batch_size=32, epochs=5)
+
+# Evaluate the Quantized Model with quantized features
+print("\nEvaluating Quantized Model...")
+quant_loss, quant_acc, quant_auc = quantized_model.evaluate(features_quant, labels)
+
+# Compare original model performance with quantized model
+print("\nOriginal Model Accuracy: {:.2f}, AUC: {:.2f}".format(orig_acc, orig_auc))
+print("Quantized Model Accuracy: {:.2f}, AUC: {:.2f}".format(quant_acc, quant_auc))
+
