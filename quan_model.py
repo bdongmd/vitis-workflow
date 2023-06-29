@@ -17,7 +17,6 @@ ap = argparse.ArgumentParser()
 ap.add_argument('-m', '--float_model', type=str, default='inputFiles/best_model.h5', help='Path of floating-point model. Default is inputFiles/best_model.h5')
 ap.add_argument('-q', '--quant_model', type=str, default='build/quant_model/best_q_model.h5', help='Path of quantized model. Default is build/quant_model/best_q_model.h5')
 ap.add_argument('-b', '--batchsize',   type=int, default=50, help='Batchsize for quantization. Default is 50')
-ap.add_argument('-e', '--evaluate',    action='store_true', help='Evaluate floating-point model if set. Default is no evaluation.')
 args = ap.parse_args()
 
 ############### Print of info
@@ -29,59 +28,37 @@ print ('Command line options:')
 print (' --float_model  : ', args.float_model)
 print (' --quant_model  : ', args.quant_model)
 print (' --batchsize    : ', args.batchsize)
-print (' --evaluate     : ', args.evaluate)
 print('------------------------------------\n')
 
-def replace_dropout(loaded_model):
-    new_model = tf.keras.models.clone_model(loaded_model)
-    new_model.set_weights(loaded_model.get_weights())
-
-    for layer in new_model.layers:
-        if isinstance(layer, tf.keras.layers.Dropout):
-            layer.build(layer.input_shape)
-            layer.call = tf.function(layer.call)
-
-    return new_model
-
-def input_fn_quant(features, labels, batchsize):
-    dataset = tf.data.Dataset.from_tensor_slices((features, labels))
-    dataset = dataset.batch(batchsize, drop_remainder=False)
-    dataset = dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
-    return dataset
-
 h5f = h5py.File('inputFiles/df_test.h5', 'r')
-features = np.array(h5f['X_test'])
-labels = np.array(h5f['Y_test'])
-h5f.close()
+features = np.array(h5f['X_test'], dtype=np.float32)
+labels = np.array(h5f['Y_test'], dtype=np.int64)
 labels = np.argmax(labels, axis=-1)
+h5f.close()
 
 ## load trained model
-#model = tf.keras.models.load_model('./inputFiles/best_model.h5')
-model = tf.keras.models.load_model('./inputFiles/my_model.h5')
+model = tf.keras.models.load_model(args.float_model)
 print(model.summary())
 
 ## compile the original model
-#model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy', tf.keras.metrics.AUC(name='auc')])
+model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy', tf.keras.metrics.AUC(name='auc')])
 
 ## Evaluate the orignal model
-#print("\nEvaluating Original Model...")
-#orig_loss, orig_acc, orig_auc = model.evaluate(features, labels)
+print("\nEvaluating Original Model...")
+orig_loss, orig_acc, orig_auc = model.evaluate(features, labels, 32)
 
 ## we want to quantize everything
 ## first here goes quantizing feature
 features_quant = features.astype(np.float16)
-## (not sure) since we are dealing with classificaiton problem where the labels are categorical and represented as integer class label, so I guess there is not need to quantize them?
-# Create a tf.data.Dataset for calibration
-calib_dataset = input_fn_quant(features_quant, labels, batchsize=50)
 
 ## Applying Quantization using Vitis Quantizer
 quantizer = vitis_quantize.VitisQuantizer(model)
-quantized_model = quantizer.quantize_model(calib_dataset=calib_dataset, verbose=2)
+quantized_model = quantizer.quantize_model(calib_dataset=features_quant)
 
 ## Compile and retrain the model
 quantized_model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy', tf.keras.metrics.AUC(name='auc')])
 ## Retrain the model after quantization (not sure if we want this so far, so commeting it out)
-## quantized_model.fit(features_quant, labels, batch_size=32, epochs=5)
+## quantized_model.fit(features_quant, labels, batch_size=args.batchsize, epochs=5)
 
 # Evaluate the Quantized Model with quantized features
 print("\nEvaluating Quantized Model...")
