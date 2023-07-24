@@ -3,6 +3,8 @@ import argparse
 import sys
 import timeit
 from prettytable import PrettyTable
+from joblib import load
+from sklearn.preprocessing import StandardScaler
 
 # Silence TensorFlow messages
 os.environ['TF_CPP_MIN_LOG_LEVEL']='3'
@@ -44,7 +46,9 @@ table = PrettyTable()
 table.field_names = ["Factor", "Original Model", "Quantized Model"]
 
 h5f = h5py.File('inputFiles/df_test.h5', 'r')
+scaler = load('inputFiles/std_scaler.bin')
 features = np.array(h5f['X_test'], dtype=np.float32)
+features = scaler.transform(features)
 labels = np.array(h5f['Y_test'], dtype=np.int64)
 labels = np.argmax(labels, axis=-1)
 h5f.close()
@@ -96,4 +100,3 @@ table.add_row(["Size (KB)", format(orig_model_size, '.2f'), format(quant_model_s
 table.add_row(["Latency (s)", format(orig_latency, '.2f'), format(quant_latency, '.2f')])
 table.add_row(["Throughput", format(orig_throughput, '.2f'), format(quant_throughput,'.2f')])
 print(table)
-
