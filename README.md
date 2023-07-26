@@ -26,14 +26,14 @@ python quan_model.py -m inputFiles/best_model.h5
 You'll get a table summarizeing the facotrs you are comparing between the original and quantized model as following:
 ```
 Summarizing the performance between the orignal and quantized models:
-+-------------+--------------------+--------------------+
-|    Factor   |   Original Model   |  Quantized Model   |
-+-------------+--------------------+--------------------+
-|   Accuracy  |        0.34        |        0.34        |
-|     AUC     |        0.43        |        0.44        |
-|  Size (KB)  |       85.93        |       67.93        |
-| Latency (s) | 13.652668051421642 | 18.273577198386192 |
-|  Throughput |      33841.08      |      25283.56      |
-+-------------+--------------------+--------------------+
++-------------+----------------+-----------------+
+|    Factor   | Original Model | Quantized Model |
++-------------+----------------+-----------------+
+|   Accuracy  |      0.66      |       0.66      |
+|     AUC     |      0.66      |       0.66      |
+|  Size (KB)  |     85.93      |      67.93      |
+| Latency (s) |     13.55      |      19.73      |
+|  Throughput |    34087.07    |     23421.07    |
++-------------+----------------+-----------------+
 ```
 The quantized model is saved under `../output/quantized_model.h5`
