@@ -4,9 +4,15 @@ This workflow has only been tested on hippeis (hippeis.pa.msu.edu).
 
 hls4ml is added and tested here to make a comparison between the vitis AI and hls4ml.
 
-2. Start the Vitis AI docker and setup python virtual environment:
+0. download required python libraries:
+Most of the libraries needed already exist on hippeis, only the following needs to be donwload
 ```
-cd hls4ml
-## change the path after -B to your own path
-singularity exec -H `pwd` -B /opt/Xilinx/Vivado/2019.2/,/home/bdong,/ssd/home/bdong/Xilinx docker://ghcr.io/fastmachinelearning/hls4ml-tutorial/hls4ml-0.7.1:latest bash
+pip install --user hls4ml
+pip install --user tensorflow==2.6.2
+```
+
+1. Setup Vivado 
+```
+alias setup_vivado_2019p2="source /opt/Xilinx/Vivado/2019.2/settings64.sh"
+setup_vivado_2019p2
 ```
