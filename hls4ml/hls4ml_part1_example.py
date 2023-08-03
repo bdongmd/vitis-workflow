@@ -1,3 +1,7 @@
+#############################################
+# This example is mainly taking from: https://github.com/fastmachinelearning/hls4ml-tutorial/blob/main/part1_getting_started.ipynb
+#############################################
+
 #!/usr/bin/env python
 # coding: utf-8
 
