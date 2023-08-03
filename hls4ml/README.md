@@ -4,7 +4,7 @@ This workflow has only been tested on hippeis (hippeis.pa.msu.edu).
 
 hls4ml is added and tested here to make a comparison between the vitis AI and hls4ml.
 
-0. Setting up environment via conda:
+## Setting up environment via conda:
 
 Note: the package included in this environment has only been tested for the part1 example. For the other examples [here](https://github.com/fastmachinelearning/hls4ml-tutorial/tree/main) may need more packages to be included in the `pip`.
 ```
