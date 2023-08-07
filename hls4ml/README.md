@@ -17,6 +17,10 @@ Once the env is created, later on you can activate and deactivate the env by doi
 conda activate hls4ml-tutorial ## activate the env
 conda deactivate ## deactivate the env
 ```
+In case you want to remove the env:
+```
+conda env remove --name hls4ml-tutorial
+```
 
 To set up Vivada environment, once you activated the `hls4ml-tutorial`:
 ```
@@ -26,5 +30,6 @@ setup_vivado_2019p2
 ## Run Example
 To run example:
 ```
+cd example
 python3 hls4ml_part1_example.py
 ```
