@@ -16,6 +16,7 @@ import numpy as np
 
 from tensorflow.keras.layers import Dropout
 from tensorflow_model_optimization.quantization.keras import vitis_quantize
+from tensorflow_model_optimization.quantization.keras import vitis_inspect
 
 ap = argparse.ArgumentParser()
 ap.add_argument('-m', '--float_model', type=str, default='inputFiles/best_model.h5', help='Path of floating-point model. Default is inputFiles/best_model.h5')
@@ -45,11 +46,63 @@ print('------------------------------------\n')
 table = PrettyTable()
 table.field_names = ["Factor", "Original Model", "Quantized Model"]
 
+# ---- SPECIFY QUANTIZATIONS AND CREATE ASSOCIATED STRING -----
+
+quant_dict = {'e_T':np.float16,'dR':np.int8,'weight':np.float16}
+quant_array = np.empty(3)
+for key in quant_dict.keys():
+    if key == 'e_T':
+        index = 0
+    elif key == 'dR':
+        index = 1    
+    elif key == 'weight':
+        index = 2
+
+    if quant_dict[key] == np.int8:
+        quant_array[index] = '8' 
+    if quant_dict[key] == np.float16:
+        quant_array[index] = '16' 
+    if quant_dict[key] == np.float32:
+        quant_array[index] = '32' 
+    if quant_dict[key] == np.float64:
+        quant_array[index] = '64' 
+
+quant_string = ''
+for quant in quant_array:
+    quant_string += str(int(quant))+'-'
+quant_string = quant_string[:-1]
+
+# ------- IMPORT DATA, QUANTIZE FEATURES, AND SCALE ---------
+
 h5f = h5py.File('inputFiles/df_test.h5', 'r')
 scaler = load('inputFiles/std_scaler.bin')
-features = np.array(h5f['X_test'], dtype=np.float32)
-features = scaler.transform(features)
+
+col_names = []
+with open('inputFiles/train_var_list.txt','r') as train_var: 
+    for line in train_var:
+        col_names.append(line.strip())
+
+features = pd.DataFrame(h5f['X_test'][:], columns=col_names)
 labels = np.array(h5f['Y_test'], dtype=np.int64)
+
+quant_features = features.copy()
+for i, name in enumerate(col_names):
+    if i % 2 == 1:
+        quant_features[name] = quant_features[name].astype(quant_dict['e_T'])
+    else:
+        quant_features[name] = quant_features[name].astype(quant_dict['dR'])
+
+print('\n\n ----- INPUT INFO ----- \n')
+print('features head: ')
+print(features[col_names[:10]].head())
+print('features.iloc[0,1,2].dtype:'+str(features.iloc[0].dtype)+', '+str(features.iloc[1].dtype)+', '+str(features.iloc[2].dtype))
+
+print('quantized features head: ')
+print(quant_features[col_names[:10]].head())
+print('quantized features.iloc[0,1,2].dtype:'+str(quant_features.iloc[0].dtype)+', '+str(quant_features.iloc[1].dtype)+', '+str(quant_features.iloc[2].dtype))
+
+features = scaler.transform(features)
+quant_features = scaler.transform(quant_features)
 labels = np.argmax(labels, axis=-1)
 h5f.close()
 
@@ -69,13 +122,31 @@ orig_latency = orig_final_time - orig_start_time
 orig_throughput = len(labels) / orig_latency
 orig_model_size = os.path.getsize(args.float_model) / 1024.
 
-## we want to quantize everything
-## first here goes quantizing feature
-features_quant = features.astype(np.float16)
-
 ## Applying Quantization using Vitis Quantizer
 quantizer = vitis_quantize.VitisQuantizer(model)
-quantized_model = quantizer.quantize_model(calib_dataset=features_quant)
+quantized_model = quantizer.quantize_model(calib_dataset=features)
+
+# Perform model inspections -- doesn't work
+
+#vitis_inspect.VitisInspector('idk_what_this_does_lets_see').inspect_model(model, 
+#                             input_shape=None,
+#                             dump_model=True,
+#                             dump_model_file="og_model.h5",
+#                             plot=True,
+#                             plot_file="og_model.svg",
+#                             dump_results=True,
+#                             dump_results_file="og_inspect_results.txt",
+#                             verbose=0)
+#
+#vitis_inspect.VitisInspector('idk_what_this_does_lets_see2').inspect_model(quantized_model, 
+#                             input_shape=None,
+#                             dump_model=True,
+#                             dump_model_file="quant_model.h5",
+#                             plot=True,
+#                             plot_file="quant_model.svg",
+#                             dump_results=True,
+#                             dump_results_file="quant_inspect_results.txt",
+#                             verbose=0)
 
 ## Compile and retrain the model
 quantized_model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy', tf.keras.metrics.AUC(name='auc')])
@@ -86,7 +157,7 @@ quantized_model.save('../output/quantized_model.h5')
 # Evaluate the Quantized Model with quantized features
 print("\nEvaluating Quantized Model...")
 quant_start_time = timeit.default_timer()
-quant_loss, quant_acc, quant_auc = quantized_model.evaluate(features_quant, labels)
+quant_loss, quant_acc, quant_auc = quantized_model.evaluate(quant_features, labels)
 quant_final_time = timeit.default_timer()
 quant_latency = quant_final_time - quant_start_time
 quant_throughput = len(labels) / quant_latency
@@ -94,9 +165,12 @@ quant_model_size = os.path.getsize('../output/quantized_model.h5') / 1024.
 
 # Compare original model performance with quantized model
 print("\nSummarizing the performance between the orignal and quantized models:")
-table.add_row(["Accuracy", format(orig_acc, '.2f'), format(quant_acc, '.2f')])
-table.add_row(["AUC", format(orig_auc, '.2f'), format(quant_auc, '.2f')])
+table.add_row(["Accuracy", format(orig_acc, '.4f'), format(quant_acc, '.4f')])
+table.add_row(["AUC", format(orig_auc, '.4f'), format(quant_auc, '.4f')])
 table.add_row(["Size (KB)", format(orig_model_size, '.2f'), format(quant_model_size, '.2f')])
 table.add_row(["Latency (s)", format(orig_latency, '.2f'), format(quant_latency, '.2f')])
 table.add_row(["Throughput", format(orig_throughput, '.2f'), format(quant_throughput,'.2f')])
+table_string = table.get_string()
 print(table)
+with open("../output/prettyTable"+quant_string+".txt", "w") as file:
+    file.write(table_string)

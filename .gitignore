@@ -1,11 +1,16 @@
+# Manually specified
+/tmp
+/.keras
+/.local
+/hls4ml
+/.bash_history
+/quan_modelDeprecated.py
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
-
-# local dataset
-inputFiles/*h5
-inputFiles/*pkl
 
 # C extensions
 *.so
