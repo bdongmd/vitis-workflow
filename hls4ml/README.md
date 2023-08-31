@@ -24,8 +24,8 @@ conda env remove --name hls4ml-tutorial
 
 To set up Vivada environment, once you activated the `hls4ml-tutorial`:
 ```
-alias setup_vivado_2019p2="source /opt/Xilinx/Vivado/2019.2/settings64.sh"
-setup_vivado_2019p2
+alias setup_vivado_2020p2="source /opt/Xilinx/Vivado/2020.2/settings64.sh"
+setup_vivado_2020p2
 ```
 ## Run Example
 To run example:
