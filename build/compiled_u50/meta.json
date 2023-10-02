@@ -1,0 +1,8 @@
+{
+    "lib": "libvart-dpu-runner.so",
+    "filename": "customcnn.xmodel",
+    "kernel": [
+        "subgraph_quant_dense(TransferMatMulToConv2d)"
+    ],
+    "target": "DPUCAHX8H_ISA2"
+}
