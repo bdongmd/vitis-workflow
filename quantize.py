@@ -19,21 +19,21 @@ from tensorflow_model_optimization.quantization.keras import vitis_quantize
 
 ap = argparse.ArgumentParser()
 ap.add_argument('-m', '--float_model', type=str, default='inputFiles/best_model.h5', help='Path of floating-point model. Default is inputFiles/best_model.h5')
-ap.add_argument('-q', '--quant_model', type=str, default='build/quant_model/best_q_model.h5', help='Path of quantized model. Default is build/quant_model/best_q_model.h5')
+ap.add_argument('-q', '--quant_model', type=str, default='build/quant_model/quantized_model.h5', help='Path of quantized model. Default is build/quant_model/quantized_model.h5')
 ap.add_argument('-b', '--batchsize',   type=int, default=50, help='Batchsize for quantization. Default is 50')
 ap.add_argument('-v', '--verbose', action='store_true', help='Enable verbose mode')
 args = ap.parse_args()
 
 ############### Print of info
-print('\n------------------------------------')
-print('TensorFlow version : ',tf.__version__)
-print(sys.version)
-print('------------------------------------')
+print ('\n------------------------------------')
+print ('TensorFlow version : ',tf.__version__)
+print ('System : ', sys.version)
+print ('------------------------------------')
 print ('Command line options:')
 print (' --float_model  : ', args.float_model)
 print (' --quant_model  : ', args.quant_model)
 print (' --batchsize    : ', args.batchsize)
-print('------------------------------------\n')
+print ('------------------------------------\n')
 
 ############### Factors we want to consider during quantization
 ### - model accuracy: the most fundamental evaluaiton of a NN. 
@@ -103,7 +103,7 @@ orig_model_size = os.path.getsize(args.float_model) / 1024.
 quantizer = vitis_quantize.VitisQuantizer(model)
 quantized_model = quantizer.quantize_model(calib_dataset=scaled_data_quant)
 ## Compile and retrain the model
-quantized_model.save('../output/quantized_model.h5')
+quantized_model.save('build/quant_model/quantized_model.h5')
 if args.verbose:
 	print("===========================================")
 	print("Quantized model summary:")
@@ -123,7 +123,7 @@ quant_loss, quant_acc, quant_auc = quantized_model.evaluate(scaled_data_quant, l
 quant_final_time = timeit.default_timer()
 quant_latency = quant_final_time - quant_start_time
 quant_throughput = len(labels) / quant_latency
-quant_model_size = os.path.getsize('../output/quantized_model.h5') / 1024.
+quant_model_size = os.path.getsize('build/quant_model/quantized_model.h5') / 1024.
 
 ## Just for test:
 #converter = tf.lite.TFLiteConverter.from_keras_model(quantized_model)
@@ -147,22 +147,22 @@ quant_model_size = os.path.getsize('../output/quantized_model.h5') / 1024.
 ## Retrain the model after quantization (not sure if we want this so far, so commeting it out)
 ## Not recommended here, using testing dataset to re-train.
 ## TO-DO: will have to ask for the training dataset and update the sample here.
-quantized_model.fit(scaled_data_quant, labels, batch_size=args.batchsize, epochs=5)
-quantized_model.save('../output/quantized_retrained_model.h5')
-retrain_quant_start_time = timeit.default_timer()
-retrain_quant_loss, retrain_quant_acc, retrain_quant_auc = quantized_model.evaluate(scaled_data_quant, labels, 32)
-retrain_quant_final_time = timeit.default_timer()
-retrain_quant_latency = retrain_quant_final_time - retrain_quant_start_time
-retrain_quant_throughput = len(labels) / retrain_quant_latency
-retrain_quant_model_size = os.path.getsize('../output/quantized_retrained_model.h5') / 1024.
+#quantized_model.fit(scaled_data_quant, labels, batch_size=args.batchsize, epochs=5)
+#quantized_model.save('build/quant_model/quantized_retrained_model.h5')
+#retrain_quant_start_time = timeit.default_timer()
+#retrain_quant_loss, retrain_quant_acc, retrain_quant_auc = quantized_model.evaluate(scaled_data_quant, labels, 32)
+#retrain_quant_final_time = timeit.default_timer()
+#retrain_quant_latency = retrain_quant_final_time - retrain_quant_start_time
+#retrain_quant_throughput = len(labels) / retrain_quant_latency
+#retrain_quant_model_size = os.path.getsize('build/quant_model/quantized_retrained_model.h5') / 1024.
 
 # Compare original model performance with quantized model
 print("\nSummarizing the performance between the orignal and quantized models:")
 table = PrettyTable()
-table.field_names = ["Factor", "Original Model", "Quantized Model", "Retrained Quantized Model"]
-table.add_row(["Accuracy[%]", format(orig_acc*100, '.2f'), format(quant_acc*100, '.2f'), format(retrain_quant_acc*100, '.2f')])
-table.add_row(["AUC", format(orig_auc, '.4f'), format(quant_auc, '.4f'), format(retrain_quant_auc, '.4f')])
-table.add_row(["Size (KB)", format(orig_model_size, '.2f'), format(quant_model_size, '.2f'), format(retrain_quant_model_size, '.2f')])
-table.add_row(["Latency (s)", format(orig_latency, '.2f'), format(quant_latency, '.2f'), format(retrain_quant_latency, '.2f')])
-table.add_row(["Throughput", format(orig_throughput, '.2f'), format(quant_throughput,'.2f'), format(retrain_quant_throughput,'.2f')])
+table.field_names = ["Factor", "Original Model", "Quantized Model"]
+table.add_row(["Accuracy[%]", format(orig_acc*100, '.2f'), format(quant_acc*100, '.2f')])
+table.add_row(["AUC", format(orig_auc, '.4f'), format(quant_auc, '.4f')])
+table.add_row(["Size (KB)", format(orig_model_size, '.2f'), format(quant_model_size, '.2f')])
+table.add_row(["Latency (s)", format(orig_latency, '.2f'), format(quant_latency, '.2f')])
+table.add_row(["Throughput", format(orig_throughput, '.2f'), format(quant_throughput,'.2f')])
 print(table)
