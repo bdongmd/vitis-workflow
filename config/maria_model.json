@@ -1,0 +1,9 @@
+{
+	"inputfile": "inputFiles/subset_df_test.h5",
+	"scaler": "inputFiles/std_scaler.bin",
+	"float_model": "inputFiles/best_model.h5",
+	"quant_model": "build/quant_model/quantized_model.h5",
+	"retrain_model": false,
+	"retrain_model_path": "build/quant_model/retrain_quantized_model.h5",
+	"verbose": true
+}
