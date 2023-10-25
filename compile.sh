@@ -50,7 +50,7 @@ compile() {
             --model           build/quant_model/quantized_model.h5 \
             --arch            $ARCH \
             --output_dir      build/compiled_$TARGET \
-            --net_name        customcnn
+            --net_name        customdnn
 }
 
 

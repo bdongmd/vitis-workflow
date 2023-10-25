@@ -66,7 +66,8 @@ if args.verbose:
 		print(f"-- Feature: {col_name}, Data Type: {data_array.dtype}")
 
 ## Quantize data
-scaled_data_quant = scaled_array.astype(np.float16)
+scaled_data_quant = scaled_array
+#scaled_data_quant = scaled_array.astype(np.float16)
 if args.verbose:
 	print("===========================================")
 	print("After quantizing the input:")
@@ -76,6 +77,9 @@ if args.verbose:
 
 ## load trained model
 model = tf.keras.models.load_model(args.float_model)
+orig_model =  model
+## compile the original model
+model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 if args.verbose:
 	print("===========================================")
 	print("Original model summary:")
@@ -87,20 +91,17 @@ if args.verbose:
 			print(f" - Weight Type: {weights.dtype}")
 			#print(f" - Weight Values: {weights}")
 
-## compile the original model
-model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy', tf.keras.metrics.AUC(name='auc')])
-
 ## Evaluate the orignal model
 print("\nEvaluating Original Model...")
 orig_start_time = timeit.default_timer()
-orig_loss, orig_acc, orig_auc = model.evaluate(scaled_array, labels, 32)
+orig_loss, orig_acc = model.evaluate(scaled_array, labels)
 orig_final_time = timeit.default_timer()
 orig_latency = orig_final_time - orig_start_time
 orig_throughput = len(labels) / orig_latency
 orig_model_size = os.path.getsize(args.float_model) / 1024.
 
 ## Applying Quantization using Vitis Quantizer
-quantizer = vitis_quantize.VitisQuantizer(model)
+quantizer = vitis_quantize.VitisQuantizer(orig_model)
 quantized_model = quantizer.quantize_model(calib_dataset=scaled_data_quant)
 ## Compile and retrain the model
 quantized_model.save('build/quant_model/quantized_model.h5')
@@ -117,9 +118,9 @@ if args.verbose:
 
 # Evaluate the Quantized Model with quantized features
 print("\nEvaluating Quantized Model...")
-quantized_model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy', tf.keras.metrics.AUC(name='auc')])
+quantized_model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 quant_start_time = timeit.default_timer()
-quant_loss, quant_acc, quant_auc = quantized_model.evaluate(scaled_data_quant, labels, 32)
+quant_loss, quant_acc = quantized_model.evaluate(scaled_data_quant, labels)
 quant_final_time = timeit.default_timer()
 quant_latency = quant_final_time - quant_start_time
 quant_throughput = len(labels) / quant_latency
@@ -161,7 +162,6 @@ print("\nSummarizing the performance between the orignal and quantized models:")
 table = PrettyTable()
 table.field_names = ["Factor", "Original Model", "Quantized Model"]
 table.add_row(["Accuracy[%]", format(orig_acc*100, '.2f'), format(quant_acc*100, '.2f')])
-table.add_row(["AUC", format(orig_auc, '.4f'), format(quant_auc, '.4f')])
 table.add_row(["Size (KB)", format(orig_model_size, '.2f'), format(quant_model_size, '.2f')])
 table.add_row(["Latency (s)", format(orig_latency, '.2f'), format(quant_latency, '.2f')])
 table.add_row(["Throughput", format(orig_throughput, '.2f'), format(quant_throughput,'.2f')])

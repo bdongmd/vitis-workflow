@@ -6,6 +6,7 @@ __pycache__/
 # local dataset
 inputFiles/*h5
 inputFiles/*pkl
+build/
 
 # C extensions
 *.so
