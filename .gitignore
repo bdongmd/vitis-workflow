@@ -30,6 +30,9 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+.bash_history
+.keras/
+.viminfo
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
