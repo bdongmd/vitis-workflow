@@ -9,6 +9,7 @@ The Vitis AI quantizer accepts a floating-point model as input and performs pre-
 ## Structure
 * [Quantization steps](#quantization-steps)
 * [Instructions](#instructions)
+* [References](#references)
 
 ## Quantization steps
 - Inspect the float model
@@ -39,20 +40,8 @@ pip install prettytable --user
 
 3. Run quantization
 ```
-python quan_model.py -m inputFiles/best_model.h5
+python quantize.py -c config/maria_model.json
 ```
 
-You'll get a table summarizeing the facotrs you are comparing between the original and quantized model as following:
-```
-Summarizing the performance between the orignal and quantized models:
-+-------------+----------------+-----------------+
-|    Factor   | Original Model | Quantized Model |
-+-------------+----------------+-----------------+
-|   Accuracy  |      0.66      |       0.66      |
-|     AUC     |      0.66      |       0.66      |
-|  Size (KB)  |     85.93      |      67.93      |
-| Latency (s) |     13.55      |      19.73      |
-|  Throughput |    34087.07    |     23421.07    |
-+-------------+----------------+-----------------+
-```
-The quantized model is saved under `../output/quantized_model.h5`
+## References
+The code is developed based on the examples from [Vitis-AI tutorial](https://github.com/Xilinx/Vitis-AI-Tutorials/), especially, [02-MNIST_classification_tf](https://github.com/Xilinx/Vitis-AI-Tutorials/tree/1.4/Design_Tutorials/02-MNIST_classification_tf) and [08-tf2_flow](https://github.com/Xilinx/Vitis-AI-Tutorials/tree/1.4/Design_Tutorials/08-tf2_flow).
