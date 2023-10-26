@@ -14,13 +14,15 @@ The Vitis AI quantizer accepts a floating-point model as input and performs pre-
 ## Quantization steps
 - Inspect the float model
   `VitisInspector` is a helper tool that inspects a float model, shows partition results for a given DPU target architecture, and indicates why the layeres are not mapped to DPU. 
-- Use quantizer to quantize the model
-  Two approaches are avaiable: post-training quantization and quantization aware training
-  post-trianing quantization: float model and calibration set should be avaiable for this step.
-  quantization aware training: 
-- Evaluate the quantized model
+- Use quantizer to quantize the model\
+  Two approaches are avaiable: post-training quantization and quantization aware training\
+  post-trianing quantization (PTQ): convert pre-trained floating-point model into a quantized one with little degradation in model accuracy. A representative dataset is required to run a few batches of inference on the floating-point model (i.e. quantization calibration).\
+  quantization aware training (QAT): models the quantization error in both the forward and backward passes during model quantizaiton.
+- Fast finetuning (details to be added)
+- Evaluate the quantized model\
   Same way to evaluate the float model. (Q: would the input need to be quantized?)
--  
+- Dumping simulation resutls
+  Compare the simulation results on CPU/GPU with the output values on the DPU
 
 ## Instructions
 1. Clone the repository by doing the following:

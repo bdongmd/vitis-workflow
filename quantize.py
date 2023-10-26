@@ -14,6 +14,8 @@ os.environ['TF_CPP_MIN_LOG_LEVEL']='3'
 
 def main():
 	labels, inputdata = util.load_dataset(CONFIG['inputfile'], CONFIG['scaler'], CONFIG['verbose'])
+	#quant_data = (inputdata * 255).astype(np.uint8)
+	quant_data = inputdata
 	model = load_model(CONFIG['float_model'])
 	if CONFIG['verbose']:
 		util.print_model(model)
@@ -32,7 +34,7 @@ def main():
 	if CONFIG['verbose']:
 		util.print_model(quantized_model)
 	quantized_model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-	quant_lat, quant_thr, quant_pred = util.time_prediction(quantized_model, inputdata, labels)
+	quant_lat, quant_thr, quant_pred = util.time_prediction(quantized_model, quant_data, labels)
 	quant_size = os.path.getsize(CONFIG['quant_model'])
 	quant_pred_labels = (quant_pred > 0.5).astype(int).flatten()
 	quant_acc = np.mean(quant_pred_labels == labels)
